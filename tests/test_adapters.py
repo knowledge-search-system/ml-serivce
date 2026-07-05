@@ -11,8 +11,8 @@ class FakeOpenAi:
         self.embeddings = SimpleNamespace(create=self._create_embeddings)
         self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create_completion))
 
-    async def _create_embeddings(self, model, input):
-        self.embedding_calls.append((model, list(input)))
+    async def _create_embeddings(self, model, input, dimensions):
+        self.embedding_calls.append((model, list(input), dimensions))
         return SimpleNamespace(
             data=[SimpleNamespace(embedding=[float(i)]) for i, _ in enumerate(input)]
         )
@@ -23,17 +23,18 @@ class FakeOpenAi:
         return SimpleNamespace(choices=[SimpleNamespace(message=message)])
 
 
-async def test_embed_batch_respects_batch_size():
+async def test_embed_batch_respects_batch_size_and_dimensions():
     openai = FakeOpenAi()
-    client = EmbeddingClient(openai, model="emb-model", batch_size=2)
+    client = EmbeddingClient(openai, model="emb-model", batch_size=2, dimensions=1536)
     embeddings = await client.embed_batch(["a", "b", "c"])
     assert len(embeddings) == 3
-    assert [len(texts) for _, texts in openai.embedding_calls] == [2, 1]
-    assert all(model == "emb-model" for model, _ in openai.embedding_calls)
+    assert [len(texts) for _, texts, _ in openai.embedding_calls] == [2, 1]
+    assert all(model == "emb-model" for model, _, _ in openai.embedding_calls)
+    assert all(dimensions == 1536 for _, _, dimensions in openai.embedding_calls)
 
 
 async def test_embed_one_returns_single_vector():
-    client = EmbeddingClient(FakeOpenAi(), model="emb-model", batch_size=10)
+    client = EmbeddingClient(FakeOpenAi(), model="emb-model", batch_size=10, dimensions=1536)
     embedding = await client.embed_one("question")
     assert embedding == [0.0]
 

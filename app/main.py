@@ -25,7 +25,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.settings = settings
     app.state.session_factory = create_session_factory(engine)
     app.state.embedder = EmbeddingClient(
-        openai, model=settings.embedding_model, batch_size=settings.embedding_batch_size
+        openai,
+        model=settings.embedding_model,
+        batch_size=settings.embedding_batch_size,
+        dimensions=settings.embedding_dimensions,
     )
     app.state.llm = LlmClient(openai, model=settings.llm_model)
     app.state.validator = FileValidator(max_size_bytes=settings.max_file_size_bytes)
